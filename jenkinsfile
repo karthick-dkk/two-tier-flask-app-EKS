@@ -1,0 +1,51 @@
+pipeline{
+    agent any
+    stages{
+        stage('Checkout form GIt'){
+            stpes{
+                git branch: 'master', url:'https://github.com/karthick-dkk/two-tier-flask-app-EKS.git'
+            }
+
+        }
+        stage('Terraform version'){
+            steps{
+                sh 'terraform --version'
+            }
+        }
+        stage('Terraform init'){
+            stpes{
+                dir('Eks-terraform') {
+                    withCredentials([string(credentialsId: 'snyk', variable: 'synk')]) {
+                    sh 'snyk auth $snyk'
+                    sh 'terrafomr init && snyk iac test --report || true'
+                    }
+               }
+            }
+        }
+        stage('Terraform validate'){
+            stpes{
+                dir('Eks-terraform') {
+                    sh 'terraform validate'
+                }
+            }
+        }
+        stage('Terraform Plan'){
+            stpes{
+                dir('Eks-terraform') {
+                    sh 'terraform plan'
+                }
+            }
+        }
+        
+        stage('Terraform app/destroy'){
+            steps{
+                dir('Eks-terraform') {
+                    script{
+                        sh 'terraform ${action}' --auto-approve
+                    }
+                }
+            }
+        }
+
+    }
+}
